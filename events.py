@@ -14,7 +14,9 @@ class Event:
         return self._kwargs[name]
 
 class Pub:
-    _observers = []
+    def __init__(self):
+        self._observers = []
+
     def attach(self, observer):
         self._observers.append(observer)
 
