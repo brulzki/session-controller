@@ -70,6 +70,12 @@ class JackMonitor(Pub):
     def is_started(self):
         return self.jackctl.IsStarted()
 
+    def start(self):
+        return self.jackctl.StartServer()
+
+    def stop(self):
+        return self.jackctl.StopServer()
+
 
 class UdevMonitor(Pub):
     def __init__(self, debug=False):
@@ -137,91 +143,67 @@ class UdevMonitor(Pub):
                 pass
 
 
+# device config
+#  - type = usb midi / alsa hw / jack client
+#  - name (used to match against)
+#  - vendor
+#  - model
+#  - usb port ? (how do I get that ?)
+#  - connect action
+#  - disconnect action
+#  - input handler
+#  - (or just a handler class for all 3 of the above ?)
+rules = [
+    {'event': { 'id': 'seq_client_start',
+                'clientname': 'Launchpad Mini'},
+     'action': 'LPController'},
+]
+
+class Rule:
+    def __init__(self, rule):
+        self._event = rule['event']
+        self._action = rule['action']
+
+    def check(self, event, ctl):
+        if event.id == self._event['id']:
+            if event.clientname == self._event['clientname']:
+                ctl.add_device(LPController(event.clientid, event.clientname))
+                return True
+
+#def load_rules():
+#    return [ Rule(x) for x in rules ]
+
+def load_rules():
+    from launchpad import LPRule
+    return [ LPRule(), ]
+
+
 class SessionController(Pub):
     def __init__(self):
         super().__init__()
+        self._rules = load_rules()
         self.pad = None
 
+    def add_device(self, device):
+        self.pad = device
+        print(self.pad)
+
     def process_event(self, event):
-        if event.id == 'seq_client_start':
-            if event.clientname == 'Launchpad Mini':
-                self.pad = LPController(event.clientid, event.clientname)
-                print(self.pad)
-                
-        elif event.id == 'seq_client_exit':
+        found = False
+        for rule in self._rules:
+            if rule.check(event, self):
+                found = True
+
+        if event.id == 'seq_client_exit':
             print(event)
             if self.pad and event.clientid == self.pad.clientid:
                 print('disconnected')
                 self.pad.disconnect()
                 self.pad = None
 
-        else:
+        elif not found:
             print(event)
-
-    def on_connect(self, id, name, portlist):
-        if name == 'Launchpad Mini':
-            print(name)
-            for x in portlist:
-                print(x)
-            self.seq.connect_ports((self.seq.client_id, self.port),
-                                   (id, 0))
-            #self.port
-            print('ports connected')
-            print(int(alsaseq.SEQ_EVENT_NOTEON))
-            event = alsaseq.SeqEvent(type=alsaseq.SEQ_EVENT_NOTEON)
-            #print(event)
-            event.dest = (id, 0)
-            event.queue = alsaseq.SEQ_QUEUE_DIRECT
-            event.time = 0.0
-            event.set_data({'note.note': 16, 'note.velocity': 60})
-            #print('event: %s %s' % (event, event.get_data()))
-            print(event)
-            self.seq.output_event(event)
-            self.seq.drain_output()
         
-
-class LPController(Pub):
-    def __init__(self, clientid, clientname):
-        super().__init__()
-        self.clientid = clientid
-        self.midiin = rtmidi.MidiIn(rtapi=rtmidi.API_LINUX_ALSA, name="Session Controller In")
-        self.midiin.open_port(self._find_port(self.midiin.get_ports(), clientname))
-        self.midiin.set_callback(self.on_midi_in)
-
-        self.midiout = rtmidi.MidiOut(rtapi=rtmidi.API_LINUX_ALSA, name="Session Controller")
-        self.midiout.open_port(self._find_port(self.midiout.get_ports(), clientname),
-                               name='Launchpad')
-        self.midiout.send_message([0xb0, 0x68, 0x60])
-        # test colours
-        self.midiout.send_message([0x90, 0, 0x63])
-
-    def __del__(self):
-        print('delete', self)
-        #self.midiin.close_port()
-        self.midiin.delete()
-        #self.midiout.close_port()
-        self.midiout.delete()
-
-    def _find_port(self, ports, clientname):
-        prefix = clientname + ':'
-        for (portnum, port) in enumerate(ports):
-            if port.startswith(prefix):
-                return portnum
-        raise Error('port not found')
-
-    def on_midi_in(self, msg, data):
-        print('0x%x' % msg[0][0], msg)
-
-    def disconnect(self):
-        self.midiin.close_port()
-        self.midiout.close_port()
-        #del self.midiin
-        #del self.midiout
-        #self.midiin.delete()
-        #self.midiout.delete()
-
-    def process_event(self, event):
-        pass
 
 def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -230,6 +212,10 @@ def main():
 
     controller = SessionController()
 
+    jack_monitor = JackMonitor(session_bus)
+    jack_monitor.attach(controller)
+    controller.jack = jack_monitor
+
     alsa_monitor = AlsaseqMonitor()
     alsa_monitor.attach(controller)
     alsa_monitor.refresh()
@@ -237,9 +223,6 @@ def main():
         alsa_monitor.update(100)
         return True
     GLib.idle_add(alsa_idle)
-
-    jack_monitor = JackMonitor(session_bus)
-    jack_monitor.attach(controller)
 
     udev_monitor = UdevMonitor()
     udev_monitor.attach(controller)
