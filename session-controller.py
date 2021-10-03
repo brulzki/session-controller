@@ -56,6 +56,7 @@ class JackMonitor(Pub):
         self.bus = bus or dbus.SessionBus()
         self.jack = self.bus.get_object('org.jackaudio.service', '/org/jackaudio/Controller')
         self.jackctl = dbus.Interface(self.jack, dbus_interface='org.jackaudio.JackControl')
+        self.jackcfg = dbus.Interface(self.jack, dbus_interface='org.jackaudio.Configure')
         self.bus.add_signal_receiver(self.on_started, dbus_interface='org.jackaudio.JackControl',
                                      signal_name='ServerStarted')
         self.bus.add_signal_receiver(self.on_stopped, dbus_interface='org.jackaudio.JackControl',
@@ -75,6 +76,24 @@ class JackMonitor(Pub):
 
     def stop(self):
         return self.jackctl.StopServer()
+
+    def get_engine_parameter(self, parameter):
+        return self.jackcfg.GetParameterValue(['engine', parameter])[2]
+
+    def set_engine_parameter(self, parameter, value):
+        if value is None:
+            return bool(self.jackcfg.ResetParameterValue(['engine', parameter]))
+        else:
+            return bool(self.jackcfg.SetParameterValue(['engine', parameter], value))
+
+    def get_driver_parameter(self, parameter):
+        return self.jackcfg.GetParameterValue(['driver', parameter])[2]
+
+    def set_driver_parameter(self, parameter, value):
+        if value is None:
+            return bool(self.jackcfg.ResetParameterValue(['driver', parameter]))
+        else:
+            return bool(self.jackcfg.SetParameterValue(['driver', parameter], value))
 
 
 class UdevMonitor(Pub):
@@ -182,6 +201,8 @@ def main():
     udev_monitor.attach(controller)
     controller.udev = udev_monitor
 
+    from plugins.autojack import AutoJackPlugin
+    autojack = AutoJackPlugin(controller)
     from launchpad import LaunchpadPlugin
     lp = LaunchpadPlugin(controller)
 
