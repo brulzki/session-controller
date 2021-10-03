@@ -153,56 +153,14 @@ class UdevMonitor(Pub):
 #  - disconnect action
 #  - input handler
 #  - (or just a handler class for all 3 of the above ?)
-rules = [
-    {'event': { 'id': 'seq_client_start',
-                'clientname': 'Launchpad Mini'},
-     'action': 'LPController'},
-]
-
-class Rule:
-    def __init__(self, rule):
-        self._event = rule['event']
-        self._action = rule['action']
-
-    def check(self, event, ctl):
-        if event.id == self._event['id']:
-            if event.clientname == self._event['clientname']:
-                ctl.add_device(LPController(event.clientid, event.clientname))
-                return True
-
-#def load_rules():
-#    return [ Rule(x) for x in rules ]
-
-def load_rules():
-    from launchpad import LPRule
-    return [ LPRule(), ]
 
 
 class SessionController(Pub):
     def __init__(self):
         super().__init__()
-        self._rules = load_rules()
-        self.pad = None
-
-    def add_device(self, device):
-        self.pad = device
-        print(self.pad)
 
     def process_event(self, event):
-        found = False
-        for rule in self._rules:
-            if rule.check(event, self):
-                found = True
-
-        if event.id == 'seq_client_exit':
-            print(event)
-            if self.pad and event.clientid == self.pad.clientid:
-                print('disconnected')
-                self.pad.disconnect()
-                self.pad = None
-
-        elif not found:
-            print(event)
+        print(event)
         
 
 def main():
@@ -218,14 +176,20 @@ def main():
 
     alsa_monitor = AlsaseqMonitor()
     alsa_monitor.attach(controller)
-    alsa_monitor.refresh()
+    controller.seq = alsa_monitor
+
+    udev_monitor = UdevMonitor()
+    udev_monitor.attach(controller)
+    controller.udev = udev_monitor
+
+    from launchpad import LaunchpadPlugin
+    lp = LaunchpadPlugin(controller)
+
     def alsa_idle():
         alsa_monitor.update(100)
         return True
     GLib.idle_add(alsa_idle)
-
-    udev_monitor = UdevMonitor()
-    udev_monitor.attach(controller)
+    alsa_monitor.refresh()
     udev_monitor.refresh()
 
     loop = GLib.MainLoop()

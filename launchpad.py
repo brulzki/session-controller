@@ -8,12 +8,24 @@ RED = 0x0f
 AMBER = 0x3f
 GREEN = 0x3C
 
-class LPRule:
-    def check(self, event, ctl):
+
+class LaunchpadPlugin:
+    def __init__(self, session):
+        self._session = session
+        self._session.seq.attach(self)
+        self.pad = None
+
+    def process_event(self, event):
         if event.id == 'seq_client_start':
             if event.clientname == 'Launchpad Mini':
-                ctl.add_device(LPController(ctl, event.clientid, event.clientname))
-                return True
+                self.pad = LPController(self._session, event.clientid, event.clientname)
+                #self._session.add_device(self.pad)
+
+        elif event.id == 'seq_client_exit':
+            if self.pad and event.clientid == self.pad.clientid:
+                print('Launchpad disconnected')
+                self.pad.disconnect()
+                self.pad = None
 
 
 class LPController(Pub):
