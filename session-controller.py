@@ -68,16 +68,18 @@ class JackMonitor(Pub):
     def __init__(self, bus=None):
         super().__init__()
         self.bus = bus or dbus.SessionBus()
+        self.connect('ServerStarted', self.on_started)
+        self.connect('ServerStopped', self.on_stopped)
         self._reconnect()
-        self.bus.add_signal_receiver(self.on_started, dbus_interface='org.jackaudio.JackControl',
-                                     signal_name='ServerStarted')
-        self.bus.add_signal_receiver(self.on_stopped, dbus_interface='org.jackaudio.JackControl',
-                                     signal_name='ServerStopped')
 
     def _reconnect(self):
         self.jack = self.bus.get_object('org.jackaudio.service', '/org/jackaudio/Controller')
         self.jackctl = dbus.Interface(self.jack, dbus_interface='org.jackaudio.JackControl')
         self.jackcfg = dbus.Interface(self.jack, dbus_interface='org.jackaudio.Configure')
+
+    def connect(self, signal, callback):
+        self.bus.add_signal_receiver(callback, dbus_interface='org.jackaudio.JackControl',
+                                     signal_name=signal)
 
     def on_started(self, *args, **kwargs):
         self.post(Event('jack_started'))
