@@ -5,6 +5,9 @@ import dbus.mainloop.glib
 import pyudev
 from pyudev_glib import MonitorObserver
 
+import signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
 from gi.repository import GLib
 from pyalsa import alsaseq
 import rtmidi
