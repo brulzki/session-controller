@@ -34,7 +34,7 @@ class AlsaseqMonitor(Pub):
             #self.connect_device(clientid, clientname, portlist)
             self.post(Event('seq_client_start', clientid=clientid,
                             clientname=clientname, portlist=portlist))
-        
+
     def update(self, timeout=1000):
         events = self.seq.receive_events(timeout=timeout, maxevents=1)
         for event in events:
@@ -213,8 +213,9 @@ class SessionController(Pub):
         self.udev.attach(self)
 
     def refresh(self):
-        self.seq.refresh()
+        # refresh udev before seq, or it causes conflicts for jack
         self.udev.refresh()
+        self.seq.refresh()
 
     def update(self, timeout=100):
         self.seq.update(timeout)
@@ -234,8 +235,8 @@ def main():
     from launchpad import LaunchpadPlugin
     lp = LaunchpadPlugin(controller)
 
-    GLib.idle_add(controller.update)
     controller.refresh()
+    GLib.idle_add(controller.update)
 
     loop = GLib.MainLoop()
     loop.run()
