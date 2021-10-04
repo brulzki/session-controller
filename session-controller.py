@@ -201,8 +201,24 @@ class UdevMonitor(Pub):
 
 
 class SessionController(Pub):
-    def __init__(self):
+    def __init__(self, bus=None):
         super().__init__()
+        if bus is None:
+            bus = dbus.SessionBus()
+        self.jack = JackMonitor(bus)
+        self.jack.attach(self)
+        self.seq = AlsaseqMonitor()
+        self.seq.attach(self)
+        self.udev = UdevMonitor()
+        self.udev.attach(self)
+
+    def refresh(self):
+        self.seq.refresh()
+        self.udev.refresh()
+
+    def update(self, timeout=100):
+        self.seq.update(timeout)
+        return True
 
     def process_event(self, event):
         print(event)
@@ -211,33 +227,15 @@ class SessionController(Pub):
 def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-    session_bus = dbus.SessionBus()
-
     controller = SessionController()
-
-    jack_monitor = JackMonitor(session_bus)
-    jack_monitor.attach(controller)
-    controller.jack = jack_monitor
-
-    alsa_monitor = AlsaseqMonitor()
-    alsa_monitor.attach(controller)
-    controller.seq = alsa_monitor
-
-    udev_monitor = UdevMonitor()
-    udev_monitor.attach(controller)
-    controller.udev = udev_monitor
 
     from plugins.autojack import AutoJackPlugin
     autojack = AutoJackPlugin(controller)
     from launchpad import LaunchpadPlugin
     lp = LaunchpadPlugin(controller)
 
-    def alsa_idle():
-        alsa_monitor.update(100)
-        return True
-    GLib.idle_add(alsa_idle)
-    alsa_monitor.refresh()
-    udev_monitor.refresh()
+    GLib.idle_add(controller.update)
+    controller.refresh()
 
     loop = GLib.MainLoop()
     loop.run()
