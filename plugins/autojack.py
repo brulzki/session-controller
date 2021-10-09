@@ -22,6 +22,7 @@ class AutoJackPlugin:
                 self._session.jack.set_driver_parameter('rate', dbus.UInt32(48000))
                 self._session.jack.set_driver_parameter('period', dbus.UInt32(128))
                 self._session.jack.set_driver_parameter('nperiods', dbus.UInt32(3))
+                self._session.jack.set_driver_parameter('midi-driver', None)
                 self._session.jack.start()
                 self._card = event.path
 
@@ -35,6 +36,7 @@ class AutoJackPlugin:
                 self._session.jack.set_driver_parameter('rate', dbus.UInt32(48000))
                 self._session.jack.set_driver_parameter('period', dbus.UInt32(64))
                 self._session.jack.set_driver_parameter('nperiods', dbus.UInt32(3))
+                self._session.jack.set_driver_parameter('midi-driver', 'seq')
                 self._session.jack.start()
                 self._card = event.path
 
