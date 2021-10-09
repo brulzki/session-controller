@@ -1,7 +1,8 @@
 
 import rtmidi
 
-from events import Event, Pub
+from sessionlib import Plugin
+from sessionlib.events import Event, Pub
 
 # colours
 RED = 0x0f
@@ -9,9 +10,9 @@ AMBER = 0x3f
 GREEN = 0x3C
 
 
-class LaunchpadPlugin:
+class LaunchpadPlugin(Plugin):
     def __init__(self, session):
-        self._session = session
+        super().__init__(session)
         self._session.seq.attach(self)
         self.pad = None
 

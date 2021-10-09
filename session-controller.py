@@ -12,7 +12,7 @@ from gi.repository import GLib
 from pyalsa import alsaseq
 import rtmidi
 
-from events import Event, Pub
+from sessionlib.events import Event, Pub
 
 class Error(Exception):
     def __init__(self, string):
@@ -235,7 +235,7 @@ def main():
 
     from plugins.autojack import AutoJackPlugin
     autojack = AutoJackPlugin(controller)
-    from launchpad import LaunchpadPlugin
+    from plugins.launchpad import LaunchpadPlugin
     lp = LaunchpadPlugin(controller)
 
     controller.refresh()

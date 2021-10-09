@@ -1,11 +1,13 @@
 
 import dbus
 
+from sessionlib import Plugin
+
 # Tascam hw:US16x08
 
-class AutoJackPlugin:
+class AutoJackPlugin(Plugin):
     def __init__(self, session):
-        self._session = session
+        super().__init__(session)
         self._session.jack.attach(self)
         self._session.udev.attach(self)
         self._card = None
