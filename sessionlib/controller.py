@@ -1,6 +1,6 @@
 import dbus
 import pyudev
-from pyudev_glib import MonitorObserver
+from pyudev.glib import MonitorObserver
 
 from pyalsa import alsaseq
 
