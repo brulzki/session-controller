@@ -5,6 +5,7 @@ from .events import Event, Pub
 from .core.alsaseq import AlsaseqMonitor
 from .core.jack import JackMonitor
 from .core.udev import UdevMonitor
+from . import plugin
 
 
 class Error(Exception):
@@ -35,6 +36,7 @@ class SessionController(Pub):
         self.seq.attach(self)
         self.udev = UdevMonitor()
         self.udev.attach(self)
+        self.plugins = plugin.Manager('plugins', self)
 
     def refresh(self):
         # refresh udev before seq, or it causes conflicts for jack
