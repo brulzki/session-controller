@@ -26,7 +26,7 @@ class Error(Exception):
 
 
 class SessionController(Pub):
-    def __init__(self, bus=None, debug=False):
+    def __init__(self, config=None, bus=None, debug=False):
         super().__init__()
         if bus is None:
             bus = dbus.SessionBus()
@@ -37,7 +37,10 @@ class SessionController(Pub):
         self.seq.attach(self)
         self.udev = UdevMonitor()
         self.udev.attach(self)
-        self.plugins = plugin.Manager('plugins', self)
+        if config:
+            plugin_path = config.get('defaults', 'plugin_path', fallback='plugins')
+        if plugin_path:
+            self.plugins = plugin.Manager(plugin_path, self)
 
     def refresh(self):
         # refresh udev before seq, or it causes conflicts for jack
