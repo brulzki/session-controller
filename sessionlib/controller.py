@@ -26,10 +26,11 @@ class Error(Exception):
 
 
 class SessionController(Pub):
-    def __init__(self, bus=None):
+    def __init__(self, bus=None, debug=False):
         super().__init__()
         if bus is None:
             bus = dbus.SessionBus()
+        self.debug = debug
         self.jack = JackMonitor(bus)
         self.jack.attach(self)
         self.seq = AlsaseqMonitor()
@@ -48,4 +49,5 @@ class SessionController(Pub):
         return True
 
     def process_event(self, event):
-        print(event)
+        if self.debug:
+            print(event)
