@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Session Controller
+Comment=Session daemon for jack-based audio studio
+Exec=session-controller
+Type=Application
+Terminal=false
